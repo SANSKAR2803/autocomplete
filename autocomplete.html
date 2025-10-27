@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Autocomplete System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .search-wrapper {
+            position: relative;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .search-box {
+            position: relative;
+            padding: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #667eea;
+            font-size: 20px;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 15px 50px 15px 50px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #searchInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .clear-btn {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #f0f0f0;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .clear-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .clear-btn.active {
+            display: flex;
+        }
+
+        .suggestions {
+            max-height: 400px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .suggestions::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .suggestions::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .suggestions::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        .suggestion-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .suggestion-item:hover {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding-left: 25px;
+        }
+
+        .suggestion-icon {
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .suggestion-text {
+            flex: 1;
+        }
+
+        .suggestion-text strong {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .suggestion-score {
+            font-size: 12px;
+            color: #999;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        .no-results {
+            padding: 40px 20px;
+            text-align: center;
+            color: #999;
+        }
+
+        .stats {
+            padding: 15px 20px;
+            background: #f8f8f8;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .loading {
+            padding: 20px;
+            text-align: center;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .highlight-animation {
+            animation: highlightPulse 0.5s ease;
+        }
+
+        @keyframes highlightPulse {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(102, 126, 234, 0.2); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Smart Search</h1>
+            <p>Powered by Trie Data Structure</p>
+        </div>
+        
+        <div class="search-wrapper">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search for programming languages, frameworks, tools..."
+                    autocomplete="off"
+                >
+                <button class="clear-btn" id="clearBtn">✕</button>
+            </div>
+            
+            <div id="suggestions" class="suggestions"></div>
+            
+            <div class="stats" id="stats" style="display: none;">
+                <span id="resultCount"></span>
+                <span id="searchTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== TRIE DATA STRUCTURE ====================
+        class TrieNode {
+            constructor() {
+                this.children = new Map();
+                this.isEndOfWord = false;
+                this.data = null;
+                this.frequency = 0;
+            }
+        }
+
+        class Trie {
+            constructor() {
+                this.root = new TrieNode();
+                this.size = 0;
+            }
+
+            insert(word, data = null) {
+                let node = this.root;
+                const lowerWord = word.toLowerCase();
+                
+                for (const char of lowerWord) {
+                    if (!node.children.has(char)) {
+                        node.children.set(char, new TrieNode());
+                    }
+                    node = node.children.get(char);
+                }
+                
+                if (!node.isEndOfWord) {
+                    this.size++;
+                }
+                
+                node.isEndOfWord = true;
+                node.data = data || { original: word };
+                node.frequency++;
+            }
+
+            search(prefix) {
+                const startTime = performance.now();
+                const results = [];
+                const lowerPrefix = prefix.toLowerCase();
+                
+                let node = this.root;
+                for (const char of lowerPrefix) {
+                    if (!node.children.has(char)) {
+                        return { results: [], time: performance.now() - startTime };
+                    }
+                    node = node.children.get(char);
+                }
+                
+                this._collectWords(node, lowerPrefix, results);
+                
+                // Sort by frequency and relevance
+                results.sort((a, b) => {
+                    if (b.frequency !== a.frequency) {
+                        return b.frequency - a.frequency;
+                    }
+                    return a.word.length - b.word.length;
+                });
+                
+                return {
+                    results: results.slice(0, 10),
+                    time: performance.now() - startTime
+                };
+            }
+
+            _collectWords(node, prefix, results) {
+                if (node.isEndOfWord) {
+                    results.push({
+                        word: node.data.original,
+                        data: node.data,
+                        frequency: node.frequency,
+                        prefix: prefix
+                    });
+                }
+                
+                for (const [char, childNode] of node.children) {
+                    this._collectWords(childNode, prefix + char, results);
+                }
+            }
+
+            // Fuzzy search with Levenshtein distance
+            fuzzySearch(query, maxDistance = 2) {
+                const startTime = performance.now();
+                const results = [];
+                const lowerQuery = query.toLowerCase();
+                
+                this._fuzzySearchHelper(this.root, '', lowerQuery, maxDistance, results);
+                
+                results.sort((a, b) => {
+                    if (a.distance !== b.distance) {
+                        return a.distance - b.distance;
+                    }
+                    return b.frequency - a.frequency;
+                });
+                
+                return {
+                    results: results.slice(0, 10),
+                    time: performance.now() - startTime
+                };
+            }
+
+            _fuzzySearchHelper(node, current, query, maxDistance, results, distance = 0) {
+                if (distance > maxDistance) return;
+                
+                if (node.isEndOfWord && current.length >= query.length - maxDistance) {
+                    const finalDistance = this._levenshteinDistance(current, query);
+                    if (finalDistance <= maxDistance) {
+                        results.push({
+                            word: node.data.original,
+                            data: node.data,
+                            frequency: node.frequency,
+                            distance: finalDistance
+                        });
+                    }
+                }
+                
+                for (const [char, childNode] of node.children) {
+                    this._fuzzySearchHelper(childNode, current + char, query, maxDistance, results, distance);
+                }
+            }
+
+            _levenshteinDistance(str1, str2) {
+                const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(0));
+                
+                for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+                for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+                
+                for (let j = 1; j <= str2.length; j++) {
+                    for (let i = 1; i <= str1.length; i++) {
+                        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                        matrix[j][i] = Math.min(
+                            matrix[j][i - 1] + 1,
+                            matrix[j - 1][i] + 1,
+                            matrix[j - 1][i - 1] + cost
+                        );
+                    }
+                }
+                
+                return matrix[str2.length][str1.length];
+            }
+        }
+
+        // ==================== APPLICATION ====================
+        const trie = new Trie();
+
+        // Sample data
+        const sampleData = [
+            'JavaScript', 'Java', 'Python', 'TypeScript', 'PHP', 'Ruby', 'C++', 'C#', 'Go', 'Rust',
+            'Swift', 'Kotlin', 'Scala', 'Perl', 'Haskell', 'React', 'Vue', 'Angular', 'Svelte',
+            'Node.js', 'Express', 'Django', 'Flask', 'Spring', 'Laravel', 'Ruby on Rails',
+            'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Docker', 'Kubernetes', 'AWS', 'Azure',
+            'Git', 'GitHub', 'GitLab', 'VS Code', 'IntelliJ', 'Eclipse', 'Vim', 'Emacs',
+            'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Matplotlib', 'Jupyter', 'Anaconda'
+        ];
+
+        // Initialize trie with sample data
+        sampleData.forEach(item => trie.insert(item));
+
+        // DOM elements
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const clearBtn = document.getElementById('clearBtn');
+        const statsDiv = document.getElementById('stats');
+        const resultCount = document.getElementById('resultCount');
+        const searchTime = document.getElementById('searchTime');
+
+        // Debounce function
+        const debounce = (func, delay) => {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func(...args), delay);
+            };
+        };
+
+        // Highlight matching text
+        function highlightMatch(text, query) {
+            const index = text.toLowerCase().indexOf(query.toLowerCase());
+            if (index === -1) return text;
+            
+            return text.substring(0, index) + 
+                   '<strong>' + text.substring(index, index + query.length) + '</strong>' +
+                   text.substring(index + query.length);
+        }
+
+        // Render suggestions
+        function renderSuggestions(results, query, searchTime) {
+            if (results.length === 0) {
+                suggestionsDiv.innerHTML = `
+                    <div class="no-results">
+                        <p style="font-size: 48px; margin-bottom: 10px;">🔍</p>
+                        <p>No results found for "${query}"</p>
+                    </div>
+                `;
+                statsDiv.style.display = 'none';
+                return;
+            }
+
+            suggestionsDiv.innerHTML = results.map((result, index) => `
+                <div class="suggestion-item" data-value="${result.word}">
+                    <span class="suggestion-icon">📌</span>
+                    <span class="suggestion-text">${highlightMatch(result.word, query)}</span>
+                    <span class="suggestion-score">${result.frequency}x</span>
+                </div>
+            `).join('');
+
+            // Show stats
+            statsDiv.style.display = 'flex';
+            resultCount.textContent = `${results.length} results`;
+            searchTime.textContent = `${searchTime.toFixed(2)}ms`;
+
+            // Add click handlers
+            document.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const value = this.getAttribute('data-value');
+                    searchInput.value = value;
+                    suggestionsDiv.innerHTML = '';
+                    statsDiv.style.display = 'none';
+                    
+                    // Increment frequency
+                    trie.insert(value);
+                    
+                    this.classList.add('highlight-animation');
+                });
+            });
+        }
+
+        // Handle search
+        const handleSearch = debounce((query) => {
+            if (query.length === 0) {
+                suggestionsDiv.innerHTML = '';
+                statsDiv.style.display = 'none';
+                return;
+            }
+
+            // Show loading
+            suggestionsDiv.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            // Simulate async search
+            setTimeout(() => {
+                let searchResult;
+                
+                // Try exact prefix match first
+                searchResult = trie.search(query);
+                
+                // If no results, try fuzzy search
+                if (searchResult.results.length === 0) {
+                    searchResult = trie.fuzzySearch(query);
+                }
+                
+                renderSuggestions(searchResult.results, query, searchResult.time);
+            }, 100);
+        }, 300);
+
+        // Event listeners
+        searchInput.addEventListener('input', (e) => {
+            const value = e.target.value;
+            clearBtn.classList.toggle('active', value.length > 0);
+            handleSearch(value);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearBtn.classList.remove('active');
+            suggestionsDiv.innerHTML = '';
+            statsDiv.style.display = 'none';
+            searchInput.focus();
+        });
+
+        // Keyboard navigation
+        let selectedIndex = -1;
+
+        searchInput.addEventListener('keydown', (e) => {
+            const items = document.querySelectorAll('.suggestion-item');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, -1);
+                updateSelection(items);
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                items[selectedIndex].click();
+                selectedIndex = -1;
+            } else if (e.key === 'Escape') {
+                suggestionsDiv.innerHTML = '';
+                statsDiv.style.display = 'none';
+                selectedIndex = -1;
+            }
+        });
+
+        function updateSelection(items) {
+            items.forEach((item, index) => {
+                if (index === selectedIndex) {
+                    item.style.background = 'linear-gradient(90deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)';
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.style.background = '';
+                }
+            });
+        }
+
+        // Click outside to close
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) {
+                suggestionsDiv.innerHTML = '';
+                statsDiv.style.display = 'none';
+                selectedIndex = -1;
+            }
+        });
+    </script>
+</body>
+</html>
